@@ -83,6 +83,8 @@ The plugin behavior can be customized by editing `/dev_hdd0/plugins/ds45pad/ds45
 | `MAX_PADS` | `1` | Number of simultaneous controllers handled. |
 | `POLL_MS` | `10` | Input polling rate in milliseconds. |
 | `PS_ONLY` | `1` | Directly injects the physical PS button from USB HID Byte 10 Bit 0. |
+| `INSERT_INTO_GAME` | `1` | **Crucial!** Injects pad inputs directly into games via Syscall 573. Required for START (Options) and SELECT (Create) to work properly in games. |
+| `ALLOW_INSERT_COMBO` | `1` | Allows toggling in-game injection using `CREATE + OPTIONS + R3`. |
 | `DIAG` | `0` | **Keep at 0!** Setting to 1 enables diagnostic logging that can steal input packets. |
 | `NOTIFY` | `1` | `1` = Show on-screen notification in XMB on controller attach. |
 | `STICK_CALIBRATION` | `OFF` | Stick response curve calibration (`OFF` or `ON`). |

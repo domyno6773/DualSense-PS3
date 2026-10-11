@@ -23,8 +23,8 @@ PS_ONLY = 1
 BT_PS_COMBO = NONE
 BT_PS_CODE = -1
 BT_PS_MASK = 0
-ALLOW_INSERT_COMBO = 0
-INSERT_INTO_GAME = 0
+ALLOW_INSERT_COMBO = 1
+INSERT_INTO_GAME = 1
 
 # Diagnostics: KEEP AT 0! Setting to 1 enables diag_watch which steals input packets
 DIAG = 0

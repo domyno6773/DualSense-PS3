@@ -458,6 +458,16 @@ void usb_poll(void)
 				pad->state.buttons &= ~DS45_B_PS;
 			}
 
+			static uint32_t s_last_buttons = 0;
+			if (pad->state.buttons != s_last_buttons) {
+				s_last_buttons = pad->state.buttons;
+				ds45_boot_mark_hex("BTN_PARSED", s_last_buttons);
+				if (len >= 11) {
+					ds45_boot_mark_hex("RAW_8_9", ((uint32_t)buf[8] << 8) | buf[9]);
+					ds45_boot_mark_hex("RAW_10_11", ((uint32_t)buf[10] << 8) | buf[11]);
+				}
+			}
+
 			if (g_cfg.diag)
 				diag_state(pad);
 
