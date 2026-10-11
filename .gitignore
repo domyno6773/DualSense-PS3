@@ -1,0 +1,10 @@
+*.o
+*.sym
+*.log
+*.prx
+*.bak*
+*.tmp
+obj/
+src/obj/
+.DS_Store
+Thumbs.db

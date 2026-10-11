@@ -1,0 +1,22 @@
+# =============================================================================
+# DS45PAD - Recognized USB Controllers
+# Console path: /dev_hdd0/plugins/ds45pad/ds45pad_devices.txt
+#
+# Official controllers are already built into the plugin; this file allows
+# adding clones, third-party pads, and new revisions without recompiling.
+#
+# Format, one per line:   VID, PID, MODEL
+# MODEL: DS4 or DUALSENSE (determines which HID report parser to use)
+#
+# Maximum 16 devices total.
+# =============================================================================
+
+# Already built-in (listed here for reference):
+#   0x054c, 0x05c4, DS4          DualShock 4 (CUH-ZCT1)
+#   0x054c, 0x09cc, DS4          DualShock 4 (CUH-ZCT2)
+#   0x054c, 0x0ba0, DS4          DualShock 4 USB Wireless Adapter
+#   0x054c, 0x0ce6, DUALSENSE    DualSense (CFI-ZCT1)
+#   0x054c, 0x0df2, DUALSENSE    DualSense Edge
+
+# Add custom/clone devices below:
+

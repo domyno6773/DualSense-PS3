@@ -1,0 +1,1 @@
+/dev_hdd0/plugins/ds45pad/ds45pad_vsh.sprx

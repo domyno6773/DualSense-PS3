@@ -1,0 +1,70 @@
+--- DS45Pad/src/ds45pad.h	2026-10-10 21:51:15.037174537 +0200
++++ build_psonly/ds45pad.h	2026-10-11 16:30:33.136849322 +0200
+@@ -366,6 +366,11 @@
+ 	 * so a game that gates on device type accepts whatever pad is present. */
+ 	int      spoof_pad_info;
+ 
++	/* PS-only mode: the virtual pad carries the PS button and nothing else.
++	 * Every other control reads as neutral, so the console does not see each
++	 * press twice (once from the real pad, once from the virtual copy). */
++	int      ps_only;
++
+ 	int      diag;             /* write DS45_DIAG_FILE                    */
+ 	int      notify;           /* show XMB notifications                  */
+ } ds45_config_t;
+--- DS45Pad/src/config.c	2026-10-10 21:51:15.037174537 +0200
++++ build_psonly/config.c	2026-10-11 16:30:35.072849437 +0200
+@@ -69,6 +69,8 @@
+ 
+ 	c->spoof_pad_info = 1;
+ 
++	c->ps_only = 0;   /* off in code; the shipped ds45pad.txt turns it on */
++
+ 	c->diag   = 0;
+ 	c->notify = 0;   /* the boot trace is the safe way to confirm loading */
+ }
+@@ -221,6 +223,8 @@
+ 		else                                 c->bt_ps_combo = DS45_PSCOMBO_NONE;
+ 	} else if (match(key, "SPOOF_PAD_INFO")) {
+ 		if (parse_int(val, &n)) c->spoof_pad_info = n;
++	} else if (match(key, "PS_ONLY")) {
++		if (parse_int(val, &n)) c->ps_only = n;
+ 	} else if (match(key, "DIAG")) {
+ 		if (parse_int(val, &n)) c->diag = n;
+ 	} else if (match(key, "NOTIFY")) {
+--- DS45Pad/src/padldd.c	2026-10-10 21:51:15.038267695 +0200
++++ build_psonly/padldd.c	2026-10-11 16:30:39.168849680 +0200
+@@ -297,6 +297,33 @@
+ 	for (i = 0; i < DS45_PAD_LEN; i++)
+ 		button[i] = 0;
+ 
++	/* --- PS-only mode ---------------------------------------------------- */
++	/* The real controller keeps talking to the console on its own port, so
++	 * copying every control onto the virtual pad makes the XMB react twice.
++	 * Here the virtual pad carries the PS button and nothing else: sticks at
++	 * centre (zero would be full deflection), pressure at rest, sensors at
++	 * their neutral value. */
++	if (g_cfg.ps_only) {
++		if (b & DS45_B_PS) {
++			ldd |= DS45_CTRL_LDD_PS;
++			d1  |= DS45_CTRL_PS;
++		}
++
++		button[DS45_BTN_LDD]            = ldd;
++		button[DS45_BTN_DIGITAL1]       = d1;
++		button[DS45_BTN_DIGITAL2]       = 0;
++		button[DS45_BTN_ANALOG_LEFT_X]  = DS45_STICK_CENTER;
++		button[DS45_BTN_ANALOG_LEFT_Y]  = DS45_STICK_CENTER;
++		button[DS45_BTN_ANALOG_RIGHT_X] = DS45_STICK_CENTER;
++		button[DS45_BTN_ANALOG_RIGHT_Y] = DS45_STICK_CENTER;
++		button[DS45_BTN_SENSOR_X]       = DS45_SENSOR_CENTER;
++		button[DS45_BTN_SENSOR_Y]       = DS45_SENSOR_CENTER;
++		button[DS45_BTN_SENSOR_Z]       = DS45_SENSOR_CENTER;
++		button[DS45_BTN_SENSOR_G]       = DS45_SENSOR_CENTER;
++		(void)d2; (void)lx; (void)ly; (void)rx; (void)ry; (void)pad;
++		return;
++	}
++
+ 	/* --- digital buttons ------------------------------------------------ */
+ 	if (b & DS45_B_SHARE)    d1 |= DS45_CTRL_SELECT;
+ 	if (b & DS45_B_OPTIONS)  d1 |= DS45_CTRL_START;

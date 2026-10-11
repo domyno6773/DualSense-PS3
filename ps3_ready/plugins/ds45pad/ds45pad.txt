@@ -1,0 +1,52 @@
+# =============================================================================
+# DS45Pad Enhanced - Configuration File
+# Console path: /dev_hdd0/plugins/ds45pad/ds45pad.txt
+# =============================================================================
+
+# Plugin status: 1 = Enabled, 0 = Disabled
+ENABLE = 1
+
+# Connection mode: USB (recommended for full native physical PS button support)
+MODE = USB
+
+# Maximum number of controllers managed by the plugin
+MAX_PADS = 1
+
+# Polling interval in milliseconds
+POLL_MS = 10
+
+# PS button mode:
+# 1 = Direct physical PS button capture via USB HID
+PS_ONLY = 1
+
+# Bluetooth PS combo settings (used if running in BT mode)
+BT_PS_COMBO = NONE
+BT_PS_CODE = -1
+BT_PS_MASK = 0
+ALLOW_INSERT_COMBO = 0
+INSERT_INTO_GAME = 0
+
+# Diagnostics: KEEP AT 0! Setting to 1 enables diag_watch which steals input packets
+DIAG = 0
+
+# XMB On-Screen Notification on controller attach: 1 = Enabled, 0 = Disabled
+NOTIFY = 1
+
+# Feature toggles
+RUMBLE = 0
+SIXAXIS = 0
+LIGHTBAR = 0
+SPOOF_PAD_INFO = 0
+
+# Stick calibration & response
+STICK_CALIBRATION = OFF
+STICK_SATURATION = 100
+STICK_DEADZONE = 0
+
+# Button remapping
+MAP_TOUCHPAD = NONE
+MAP_MUTE = NONE
+MAP_FN_L = NONE
+MAP_FN_R = NONE
+MAP_PADDLE_L = NONE
+MAP_PADDLE_R = NONE
