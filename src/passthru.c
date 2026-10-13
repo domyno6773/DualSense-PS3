@@ -233,6 +233,10 @@ void ds45_trigger_bt_ps(int pressed)
 void ds45_inject_bt_pad(uint64_t r_w0, uint64_t r_w1)
 {
 	static int s_last_ps = 0;
+	static int s_menu_active = 0;
+	static int s_neutral_sent = 0;
+	CellPadInfo2 pinfo;
+	int intercepted = 0;
 	int i;
 
 	/* Extract bytes from raw report in kernel bt_work */
@@ -251,28 +255,16 @@ void ds45_inject_bt_pad(uint64_t r_w0, uint64_t r_w1)
 	uint16_t d2 = 0;
 	uint16_t ldd = 0;
 
-	/* D-pad Hat decode (b0 low 4 bits: 0=Up, 1=UR, 2=R, 3=DR, 4=D, 5=DL, 6=L, 7=UL, 8=neutral) */
-	uint8_t hat = b0 & 0x0F;
-	if (hat == 0 || hat == 1 || hat == 7) d1 |= DS45_CTRL_UP;
-	if (hat == 1 || hat == 2 || hat == 3) d1 |= DS45_CTRL_RIGHT;
-	if (hat == 3 || hat == 4 || hat == 5) d1 |= DS45_CTRL_DOWN;
-	if (hat == 5 || hat == 6 || hat == 7) d1 |= DS45_CTRL_LEFT;
+	/* Check if the system is intercepting pad inputs (in-game XMB / PS menu active) */
+	if (cellPadGetInfo2(&pinfo) == CELL_PAD_OK) {
+		intercepted = (pinfo.system_info & 0x01) ? 1 : 0; /* bit 0 = CELL_PAD_INFO_INTERCEPTED */
+	}
 
-	/* Action buttons (b0 high 4 bits) */
-	if (b0 & 0x10) d2 |= DS45_CTRL_SQUARE;
-	if (b0 & 0x20) d2 |= DS45_CTRL_CROSS;
-	if (b0 & 0x40) d2 |= DS45_CTRL_CIRCLE;
-	if (b0 & 0x80) d2 |= DS45_CTRL_TRIANGLE;
-
-	/* Shoulder / System buttons (b1) */
-	if (b1 & 0x01) d2 |= DS45_CTRL_L1;
-	if (b1 & 0x02) d2 |= DS45_CTRL_R1;
-	if (b1 & 0x04) d2 |= DS45_CTRL_L2;
-	if (b1 & 0x08) d2 |= DS45_CTRL_R2;
-	if (b1 & 0x10) d1 |= DS45_CTRL_SELECT; /* Share / Create */
-	if (b1 & 0x20) d1 |= DS45_CTRL_START;  /* Options */
-	if (b1 & 0x40) d1 |= DS45_CTRL_L3;
-	if (b1 & 0x80) d1 |= DS45_CTRL_R3;
+	if (ps_phys) {
+		s_menu_active = 1;
+	} else if (!intercepted) {
+		s_menu_active = 0;
+	}
 
 	/* Physical PS button */
 	if (ps_phys) {
@@ -283,6 +275,51 @@ void ds45_inject_bt_pad(uint64_t r_w0, uint64_t r_w1)
 	if (ps_phys != s_last_ps) {
 		s_last_ps = ps_phys;
 		ds45_boot_mark(ps_phys ? "BT_PS_LDD_PRESS_OK" : "BT_PS_LDD_RELEASE_OK");
+	}
+
+	/* While in-game (multiMAN / game running, menu closed):
+	 * Port 0 already delivers all face buttons and sticks to the game.
+	 * Port 1 must remain completely neutral/dormant so multiMAN and games
+	 * never receive double input! */
+	if (!s_menu_active && !intercepted && !ps_phys) {
+		if (s_neutral_sent)
+			return; /* nothing to do while playing normally */
+		s_neutral_sent = 1;
+	} else {
+		s_neutral_sent = 0;
+	}
+
+	/* Only forward face buttons and stick deflection when in-game XMB is active */
+	if (s_menu_active || intercepted) {
+		/* D-pad Hat decode (b0 low 4 bits: 0=Up, 1=UR, 2=R, 3=DR, 4=D, 5=DL, 6=L, 7=UL, 8=neutral) */
+		uint8_t hat = b0 & 0x0F;
+		if (hat == 0 || hat == 1 || hat == 7) d1 |= DS45_CTRL_UP;
+		if (hat == 1 || hat == 2 || hat == 3) d1 |= DS45_CTRL_RIGHT;
+		if (hat == 3 || hat == 4 || hat == 5) d1 |= DS45_CTRL_DOWN;
+		if (hat == 5 || hat == 6 || hat == 7) d1 |= DS45_CTRL_LEFT;
+
+		/* Action buttons (b0 high 4 bits) */
+		if (b0 & 0x10) d2 |= DS45_CTRL_SQUARE;
+		if (b0 & 0x20) d2 |= DS45_CTRL_CROSS;
+		if (b0 & 0x40) d2 |= DS45_CTRL_CIRCLE;
+		if (b0 & 0x80) d2 |= DS45_CTRL_TRIANGLE;
+
+		/* Shoulder / System buttons (b1) */
+		if (b1 & 0x01) d2 |= DS45_CTRL_L1;
+		if (b1 & 0x02) d2 |= DS45_CTRL_R1;
+		if (b1 & 0x04) d2 |= DS45_CTRL_L2;
+		if (b1 & 0x08) d2 |= DS45_CTRL_R2;
+		if (b1 & 0x10) d1 |= DS45_CTRL_SELECT; /* Share / Create */
+		if (b1 & 0x20) d1 |= DS45_CTRL_START;  /* Options */
+		if (b1 & 0x40) d1 |= DS45_CTRL_L3;
+		if (b1 & 0x80) d1 |= DS45_CTRL_R3;
+	} else {
+		lx = DS45_STICK_CENTER;
+		ly = DS45_STICK_CENTER;
+		rx = DS45_STICK_CENTER;
+		ry = DS45_STICK_CENTER;
+		l2_analog = 0;
+		r2_analog = 0;
 	}
 
 	for (i = 0; i < DS45_MAX_PADS; i++) {

@@ -299,10 +299,16 @@ static int32_t ds45_attach(int32_t dev_id)
 		return CELL_USBD_ATTACH_SUCCEEDED;
 	}
 
-	/* In AUTO mode a cabled controller always wins: preempt any active Bluetooth pad */
+	/* In AUTO mode: if a Bluetooth pad is already active on the console,
+	 * do NOT register a second controller on USB.
+	 * The DualSense cannot drop its Bluetooth link just because a cable is
+	 * plugged in, so registering on USB would force it onto Port 1 (Player 2)
+	 * and deliver double inputs. Instead, let the controller charge safely
+	 * over USB while Bluetooth continues to drive Player 1. */
 	if (g_cfg.mode == DS45_MODE_AUTO && ds45_bt_pads_active() > 0) {
-		ds45_boot_mark("usb_preempt_bt");
-		passthru_release();
+		ds45_boot_mark("usb_attach_skip_bt_active");
+		unlock();
+		return CELL_USBD_ATTACH_SUCCEEDED;
 	}
 
 	pad = alloc_slot();
