@@ -2,9 +2,15 @@
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Platform](https://img.shields.io/badge/Platform-PS3_CFW_%7C_PS3HEN-orange.svg)]()
+[![Tested Firmware](https://img.shields.io/badge/Tested%20on-Firmware%204.93%20(PS3HEN)-success.svg)]()
 [![Hardware Verified](https://img.shields.io/badge/Status-Verified_Working_on_Hardware-brightgreen.svg)]()
 
 A high-performance background VSH PRX/SPRX plugin for the **PlayStation 3 (CFW and PS3HEN)** providing native **USB and internal Bluetooth** support for the **PlayStation 5 DualSense** (`CFI-ZCT1`), **DualSense Edge**, and **DualShock 4** controllers — featuring full, native support for the physical **PlayStation (PS / Home) button** with **zero button combinations**!
+
+> [!WARNING]
+> ### ⚠️ Firmware Compatibility Notice
+> **All development, kernel offsets, and real-hardware testing have been performed exclusively on Firmware 4.93 (PS3HEN 4.93).**
+> Compatibility with older or different firmware versions (e.g., 4.80 – 4.92, or various other CFW/HEN revisions) is **not guaranteed and has not been tested**. Because the Bluetooth physical PS button recovery relies on direct LV2 kernel Table of Contents (TOC) offsets and internal memory structures (`bt_work`), these structures may differ across firmware releases. Use on other firmware versions at your own discretion.
 
 ---
 
@@ -16,6 +22,7 @@ A high-performance background VSH PRX/SPRX plugin for the **PlayStation 3 (CFW a
 * **Seamless Auto Mode (`MODE = AUTO`)**: Plug in via USB for ultra-low latency charging & play, or unplug to seamlessly continue playing over wireless internal Bluetooth.
 * **Clean In-Game Input**: In games and apps (multiMAN, retro emulators, PS3 titles), input operates cleanly as Player 1 without ghost controllers or duplicate player conflicts.
 * **DualSense & DualShock 4**: Supports official Sony PS5 DualSense (`054c:0ce6`), DualSense Edge (`054c:0df2`), and DualShock 4 v1 & v2 (`054c:05c4`, `054c:09cc`).
+* **Firmware 4.93 Verified**: Thoroughly tested and verified on **PS3 Super Slim running PS3HEN 4.93** (untested on older firmware versions).
 * **CFW & PS3HEN Compatible**: Signed with 3.55 retail keys (`Revision 0A`, VSH Auth-ID `1070000052000001`), ensuring 100% stable booting without console freezes.
 * **Plug & Play**: Pre-compiled and ready to install directly from the `ps3_ready/` directory.
 
