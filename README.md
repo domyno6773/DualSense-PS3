@@ -4,6 +4,7 @@
 [![Platform](https://img.shields.io/badge/Platform-PS3_CFW_%7C_PS3HEN-orange.svg)]()
 [![Tested Firmware](https://img.shields.io/badge/Tested%20on-Firmware%204.93%20(PS3HEN)-success.svg)]()
 [![Hardware Verified](https://img.shields.io/badge/Status-Verified_Working_on_Hardware-brightgreen.svg)]()
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C.svg?logo=paypal&logoColor=white)](https://www.paypal.com/paypalme/domyno6773)
 
 A high-performance background VSH PRX/SPRX plugin for the **PlayStation 3 (CFW and PS3HEN)** providing native **USB and internal Bluetooth** support for the **PlayStation 5 DualSense** (`CFI-ZCT1`), **DualSense Edge**, and **DualShock 4** controllers — featuring full, native support for the physical **PlayStation (PS / Home) button** with **zero button combinations**!
 
@@ -170,6 +171,22 @@ This project is built upon the incredible work of the PS3 homebrew development c
 * **[OsirisX](https://github.com/OsirisX)** — Author of [PS3xPAD](https://github.com/OsirisX/PS3xPAD), the foundation for custom controller LDD injection on PS3.
 * **[aldostools](https://github.com/aldostools)** — For webMAN MOD, PRX signing guides, and invaluable documentation on the PS3 VSH environment.
 * **PS3Xploit Team** — For PS3HEN and LV2 syscall research.
+
+---
+
+## 💖 Support the Project / Donazioni
+
+If this project made playing on your PS3 with your DualSense or DualShock 4 controller better and you'd like to support continued development, maintenance, and hardware testing, consider buying me a coffee or sending a donation!
+
+<p align="left">
+  <a href="https://www.paypal.com/paypalme/domyno6773" target="_blank">
+    <img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal" />
+  </a>
+</p>
+
+> [!TIP]
+> **PayPal Donation Link**: **[paypal.me/domyno6773](https://www.paypal.com/paypalme/domyno6773)**  
+> Any support is greatly appreciated! Grazie per il supporto! ☕🎮
 
 ---
 
