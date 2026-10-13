@@ -17,14 +17,11 @@ void ds45_config_defaults(ds45_config_t *c)
 	memset(c, 0, sizeof(*c));
 
 	c->enable = 1;
-	/* Off at startup. Measured on hardware: with this on, an app started
-	 * afterwards never finishes loading. It is switched on by the button
-	 * combination once a game is already running. */
-	c->insert_into_game = 0;
+	c->insert_into_game = 1;
+	c->allow_insert_combo = 1;
 
-	/* Raw USB is required for a physical PS bit without a measured generic
-	 * mapping. Device acquisition on the target HEN must still be verified. */
-	c->mode             = DS45_MODE_USB;
+	/* AUTO mode: raw USB when cabled, otherwise Bluetooth passthrough */
+	c->mode             = DS45_MODE_AUTO;
 	c->pressure         = DS45_PRESSURE_DIGITAL;
 	c->pressure_ramp_ms = 200;
 	c->touch_mode       = DS45_TOUCH_OFF;
@@ -64,7 +61,7 @@ void ds45_config_defaults(ds45_config_t *c)
 	c->bt_source_port = -1;   /* auto-detect */
 	c->bt_ps_code     = -1;   /* unknown until measured */
 	c->bt_ps_mask     = 0;
-	c->bt_ps_combo    = DS45_PSCOMBO_NONE;
+	c->bt_ps_combo    = DS45_PSCOMBO_SELECT_START;
 
 	c->spoof_pad_info = 1;
 	c->ps_only = 1;

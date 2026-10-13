@@ -8,3 +8,5 @@ obj/
 src/obj/
 .DS_Store
 Thumbs.db
+ds45pad_boot*.txt
+sdk_doc_chm/

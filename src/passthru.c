@@ -14,9 +14,34 @@
  */
 
 #include <string.h>
+#include <sys/process.h>
 #include <cell/pad.h>
 
 #include "ds45pad.h"
+
+/* Syscall 6 (sys_cfw_peek): passive 64-bit kernel memory read */
+static inline uint64_t peekq(uint64_t addr)
+{
+	system_call_1(6, addr);
+	return_to_user_prog(uint64_t);
+}
+
+static void ds45_boot_mark_u64(const char *tag, uint64_t val)
+{
+	char tag_hi[64];
+	char tag_lo[64];
+	int i = 0;
+	while (tag[i] && i < 48) {
+		tag_hi[i] = tag[i];
+		tag_lo[i] = tag[i];
+		i++;
+	}
+	tag_hi[i] = '_'; tag_hi[i+1] = 'H'; tag_hi[i+2] = 'I'; tag_hi[i+3] = '\0';
+	tag_lo[i] = '_'; tag_lo[i+1] = 'L'; tag_lo[i+2] = 'O'; tag_lo[i+3] = '\0';
+
+	ds45_boot_mark_hex(tag_hi, (uint32_t)(val >> 32));
+	ds45_boot_mark_hex(tag_lo, (uint32_t)(val & 0xFFFFFFFFULL));
+}
 
 /* Consecutive failed reads of the source port before the virtual pad is torn
  * down. At a 10 ms poll this is a fifth of a second of silence. */
@@ -142,7 +167,7 @@ int passthru_scan(void)
 		}
 
 		if (g_cfg.notify)
-			ds45_notify("DS45PAD: controle Bluetooth adotado");
+			ds45_notify("DS45Pad Bluetooth Attivo / Active");
 
 		bound++;
 	}
@@ -150,128 +175,7 @@ int passthru_scan(void)
 	return bound;
 }
 
-/* Turn the firmware's generic pad sample back into our neutral state so it can
- * go through exactly the same translation path as a USB controller. */
-static void state_from_generic(ds45_pad_t *pad, const CellPadData *data,
-                               ds45_state_t *st)
-{
-	uint16_t d1, d2;
 
-	/* Everything here is bounded by data->len, because the buffer was zeroed
-	 * before the read and anything the driver did not fill in is therefore 0.
-	 *
-	 * Reading the stick words unguarded was making the XMB scroll on its own:
-	 * a report that only carried the digital buttons left the analog words at
-	 * 0, which the response curve then turned into full deflection. It also
-	 * poisoned the calibration, teaching it a minimum of 0 on all four axes
-	 * from data that never came from the stick. */
-	/* Record what the generic driver actually gives us, once. If len never
-	 * reaches 8 there are no analog words in the source at all, and no amount
-	 * of curve correction can invent them - that would make passthrough
-	 * unable to deliver sticks, full stop. */
-	{
-		static int len_reported;
-
-		if (!len_reported) {
-			len_reported = 1;
-			ds45_boot_mark_hex("src_pad_len", (uint32_t)data->len);
-		}
-	}
-
-	if (data->len <= DS45_BTN_DIGITAL2) {
-		st->valid = 0;
-		return;
-	}
-
-	d1 = data->button[DS45_BTN_DIGITAL1];
-	d2 = data->button[DS45_BTN_DIGITAL2];
-
-	st->buttons = 0;
-	if (d1 & DS45_CTRL_SELECT) st->buttons |= DS45_B_SHARE;
-	if (d1 & DS45_CTRL_START)  st->buttons |= DS45_B_OPTIONS;
-	if (d1 & DS45_CTRL_L3)     st->buttons |= DS45_B_L3;
-	if (d1 & DS45_CTRL_R3)     st->buttons |= DS45_B_R3;
-	if (d1 & DS45_CTRL_UP)     st->buttons |= DS45_B_UP;
-	if (d1 & DS45_CTRL_RIGHT)  st->buttons |= DS45_B_RIGHT;
-	if (d1 & DS45_CTRL_DOWN)   st->buttons |= DS45_B_DOWN;
-	if (d1 & DS45_CTRL_LEFT)   st->buttons |= DS45_B_LEFT;
-
-	if (d2 & DS45_CTRL_SQUARE)   st->buttons |= DS45_B_SQUARE;
-	if (d2 & DS45_CTRL_CROSS)    st->buttons |= DS45_B_CROSS;
-	if (d2 & DS45_CTRL_CIRCLE)   st->buttons |= DS45_B_CIRCLE;
-	if (d2 & DS45_CTRL_TRIANGLE) st->buttons |= DS45_B_TRIANGLE;
-	if (d2 & DS45_CTRL_L1)       st->buttons |= DS45_B_L1;
-	if (d2 & DS45_CTRL_R1)       st->buttons |= DS45_B_R1;
-	if (d2 & DS45_CTRL_L2)       st->buttons |= DS45_B_L2;
-	if (d2 & DS45_CTRL_R2)       st->buttons |= DS45_B_R2;
-
-	if (data->len > DS45_BTN_ANALOG_LEFT_Y) {
-		st->lx = (uint8_t)data->button[DS45_BTN_ANALOG_LEFT_X];
-		st->ly = (uint8_t)data->button[DS45_BTN_ANALOG_LEFT_Y];
-		st->rx = (uint8_t)data->button[DS45_BTN_ANALOG_RIGHT_X];
-		st->ry = (uint8_t)data->button[DS45_BTN_ANALOG_RIGHT_Y];
-		st->sticks_valid = 1;
-	} else {
-		/* No analog words in this report - centre them rather than invent
-		 * a deflection, and keep the calibration away from these samples. */
-		st->lx = st->ly = st->rx = st->ry = DS45_STICK_CENTER;
-		st->sticks_valid = 0;
-	}
-
-	/* The generic driver reports the triggers as plain buttons, so synthesise
-	 * the analog travel the emulated pressure path expects. */
-	st->l2 = (st->buttons & DS45_B_L2) ? 255 : 0;
-	st->r2 = (st->buttons & DS45_B_R2) ? 255 : 0;
-	if (data->len > DS45_BTN_PRESS_R2) {
-		if (data->button[DS45_BTN_PRESS_L2])
-			st->l2 = (uint8_t)data->button[DS45_BTN_PRESS_L2];
-		if (data->button[DS45_BTN_PRESS_R2])
-			st->r2 = (uint8_t)data->button[DS45_BTN_PRESS_R2];
-	}
-
-	/* No motion or touch over the generic path. */
-	st->gyro[0] = st->gyro[1] = st->gyro[2] = 0;
-	st->accel[0] = st->accel[1] = st->accel[2] = 0;
-	st->touch[0].active = st->touch[1].active = 0;
-
-	/* PS button. Two ways of getting one:
-	 *  - the code/mask pair found with the diagnostic dump, when the firmware
-	 *    does surface it somewhere in the report;
-	 *  - otherwise a button combination configured by the user. */
-	if (g_cfg.bt_ps_code >= 0 && g_cfg.bt_ps_code < data->len &&
-	    g_cfg.bt_ps_code < (int)(sizeof(data->button) / sizeof(data->button[0])) &&
-	    (data->button[g_cfg.bt_ps_code] & g_cfg.bt_ps_mask))
-		st->buttons |= DS45_B_PS;
-
-	/* R3 held means the user is going for the insert-into-game toggle, which
-	 * is built from the same two buttons plus R3. Without this exclusion the
-	 * substitution below consumed SHARE and OPTIONS first and the toggle
-	 * combination could never be recognised at all. */
-	if ((st->buttons & (DS45_B_SHARE | DS45_B_OPTIONS | DS45_B_R3)) !=
-	    (DS45_B_SHARE | DS45_B_OPTIONS | DS45_B_R3)) {
-		switch (g_cfg.bt_ps_combo) {
-		case DS45_PSCOMBO_SELECT_START:
-			if ((st->buttons & (DS45_B_SHARE | DS45_B_OPTIONS)) ==
-			    (DS45_B_SHARE | DS45_B_OPTIONS)) {
-				st->buttons |= DS45_B_PS;
-				st->buttons &= ~(DS45_B_SHARE | DS45_B_OPTIONS);
-			}
-			break;
-		case DS45_PSCOMBO_L3_R3:
-			if ((st->buttons & (DS45_B_L3 | DS45_B_R3)) ==
-			    (DS45_B_L3 | DS45_B_R3)) {
-				st->buttons |= DS45_B_PS;
-				st->buttons &= ~(DS45_B_L3 | DS45_B_R3);
-			}
-			break;
-		default:
-			break;
-		}
-	}
-
-	(void)pad;
-	st->valid = 1;
-}
 
 /* Is the source port still listed as connected, regardless of whether reading
  * it happens to be working right now? */
@@ -287,9 +191,210 @@ static int source_still_connected(int port)
 	return (info.port_status[port] & DS45_STATUS_CONNECTED) ? 1 : 0;
 }
 
+void ds45_trigger_bt_ps(int pressed)
+{
+	static int s_last_ps = 0;
+	int i;
+
+	if (pressed == s_last_ps)
+		return;
+	s_last_ps = pressed;
+
+	for (i = 0; i < DS45_MAX_PADS; i++) {
+		ds45_pad_t *pad = &g_pads[i];
+		CellPadData ldd_data;
+		int r, s;
+
+		if (!pad->in_use || pad->link != DS45_LINK_BT || pad->handle < 0)
+			continue;
+
+		memset(&ldd_data, 0, sizeof(ldd_data));
+		ldd_data.len = DS45_PAD_LEN;
+		if (pressed) {
+			ldd_data.button[DS45_BTN_LDD]      = DS45_CTRL_LDD_PS;
+			ldd_data.button[DS45_BTN_DIGITAL1] = DS45_CTRL_PS;
+		}
+		ldd_data.button[DS45_BTN_ANALOG_LEFT_X]  = DS45_STICK_CENTER;
+		ldd_data.button[DS45_BTN_ANALOG_LEFT_Y]  = DS45_STICK_CENTER;
+		ldd_data.button[DS45_BTN_ANALOG_RIGHT_X] = DS45_STICK_CENTER;
+		ldd_data.button[DS45_BTN_ANALOG_RIGHT_Y] = DS45_STICK_CENTER;
+		for (s = DS45_BTN_SENSOR_X; s <= DS45_BTN_SENSOR_G; s++)
+			ldd_data.button[s] = DS45_SENSOR_CENTER;
+
+		r = cellPadLddDataInsert(pad->handle, &ldd_data);
+		if (r == CELL_PAD_OK) {
+			ds45_boot_mark(pressed ? "BT_PS_LDD_PRESS_OK" : "BT_PS_LDD_RELEASE_OK");
+		} else {
+			ds45_boot_mark_hex("BT_PS_LDD_FAIL", (uint32_t)r);
+		}
+	}
+}
+
+void ds45_inject_bt_pad(uint64_t r_w0, uint64_t r_w1)
+{
+	static int s_last_ps = 0;
+	int i;
+
+	/* Extract bytes from raw report in kernel bt_work */
+	uint8_t lx = (uint8_t)(r_w0 >> 40);
+	uint8_t ly = (uint8_t)(r_w0 >> 32);
+	uint8_t rx = (uint8_t)(r_w0 >> 24);
+	uint8_t ry = (uint8_t)(r_w0 >> 16);
+	uint8_t b0 = (uint8_t)(r_w0 >> 8);  /* D-pad hat + Square/Cross/Circle/Triangle */
+	uint8_t b1 = (uint8_t)(r_w0);       /* L1/R1/L2/R2/Create/Options/L3/R3 */
+	uint8_t b2 = (uint8_t)(r_w1 >> 56); /* PS/Touchpad/Mute */
+	uint8_t l2_analog = (uint8_t)(r_w1 >> 48);
+	uint8_t r2_analog = (uint8_t)(r_w1 >> 40);
+
+	int ps_phys = (b2 & 0x01) ? 1 : 0;
+	uint16_t d1 = 0;
+	uint16_t d2 = 0;
+	uint16_t ldd = 0;
+
+	/* D-pad Hat decode (b0 low 4 bits: 0=Up, 1=UR, 2=R, 3=DR, 4=D, 5=DL, 6=L, 7=UL, 8=neutral) */
+	uint8_t hat = b0 & 0x0F;
+	if (hat == 0 || hat == 1 || hat == 7) d1 |= DS45_CTRL_UP;
+	if (hat == 1 || hat == 2 || hat == 3) d1 |= DS45_CTRL_RIGHT;
+	if (hat == 3 || hat == 4 || hat == 5) d1 |= DS45_CTRL_DOWN;
+	if (hat == 5 || hat == 6 || hat == 7) d1 |= DS45_CTRL_LEFT;
+
+	/* Action buttons (b0 high 4 bits) */
+	if (b0 & 0x10) d2 |= DS45_CTRL_SQUARE;
+	if (b0 & 0x20) d2 |= DS45_CTRL_CROSS;
+	if (b0 & 0x40) d2 |= DS45_CTRL_CIRCLE;
+	if (b0 & 0x80) d2 |= DS45_CTRL_TRIANGLE;
+
+	/* Shoulder / System buttons (b1) */
+	if (b1 & 0x01) d2 |= DS45_CTRL_L1;
+	if (b1 & 0x02) d2 |= DS45_CTRL_R1;
+	if (b1 & 0x04) d2 |= DS45_CTRL_L2;
+	if (b1 & 0x08) d2 |= DS45_CTRL_R2;
+	if (b1 & 0x10) d1 |= DS45_CTRL_SELECT; /* Share / Create */
+	if (b1 & 0x20) d1 |= DS45_CTRL_START;  /* Options */
+	if (b1 & 0x40) d1 |= DS45_CTRL_L3;
+	if (b1 & 0x80) d1 |= DS45_CTRL_R3;
+
+	/* Physical PS button */
+	if (ps_phys) {
+		ldd |= DS45_CTRL_LDD_PS;
+		d1  |= DS45_CTRL_PS;
+	}
+
+	if (ps_phys != s_last_ps) {
+		s_last_ps = ps_phys;
+		ds45_boot_mark(ps_phys ? "BT_PS_LDD_PRESS_OK" : "BT_PS_LDD_RELEASE_OK");
+	}
+
+	for (i = 0; i < DS45_MAX_PADS; i++) {
+		ds45_pad_t *pad = &g_pads[i];
+		CellPadData ldd_data;
+		int s;
+
+		if (!pad->in_use || pad->link != DS45_LINK_BT || pad->handle < 0)
+			continue;
+
+		memset(&ldd_data, 0, sizeof(ldd_data));
+		ldd_data.len = DS45_PAD_LEN;
+
+		ldd_data.button[DS45_BTN_LDD]            = ldd;
+		ldd_data.button[DS45_BTN_DIGITAL1]       = d1;
+		ldd_data.button[DS45_BTN_DIGITAL2]       = d2;
+		ldd_data.button[DS45_BTN_ANALOG_LEFT_X]  = lx;
+		ldd_data.button[DS45_BTN_ANALOG_LEFT_Y]  = ly;
+		ldd_data.button[DS45_BTN_ANALOG_RIGHT_X] = rx;
+		ldd_data.button[DS45_BTN_ANALOG_RIGHT_Y] = ry;
+
+		/* Digital pressure values */
+		ldd_data.button[DS45_BTN_PRESS_RIGHT]    = (d1 & DS45_CTRL_RIGHT) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_LEFT]     = (d1 & DS45_CTRL_LEFT) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_UP]       = (d1 & DS45_CTRL_UP) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_DOWN]     = (d1 & DS45_CTRL_DOWN) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_TRIANGLE] = (d2 & DS45_CTRL_TRIANGLE) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_CIRCLE]   = (d2 & DS45_CTRL_CIRCLE) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_CROSS]    = (d2 & DS45_CTRL_CROSS) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_SQUARE]   = (d2 & DS45_CTRL_SQUARE) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_L1]       = (d2 & DS45_CTRL_L1) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_R1]       = (d2 & DS45_CTRL_R1) ? 255 : 0;
+		ldd_data.button[DS45_BTN_PRESS_L2]       = l2_analog;
+		ldd_data.button[DS45_BTN_PRESS_R2]       = r2_analog;
+
+		for (s = DS45_BTN_SENSOR_X; s <= DS45_BTN_SENSOR_G; s++)
+			ldd_data.button[s] = DS45_SENSOR_CENTER;
+
+		cellPadLddDataInsert(pad->handle, &ldd_data);
+	}
+}
+
+void ds45_process_bt_input(uint32_t port_no, CellPadData *data)
+{
+	static int s_mask_ss_frames = 0;
+	static int s_mask_lr_frames = 0;
+	static uint16_t s_last_d1 = 0;
+	uint16_t d1;
+	int combo_select_start = 0;
+	int combo_l3_r3 = 0;
+	int ps_pressed = 0;
+
+	if (!data || data->len <= DS45_BTN_DIGITAL1)
+		return;
+
+	d1 = data->button[DS45_BTN_DIGITAL1];
+
+	if (d1 != s_last_d1) {
+		s_last_d1 = d1;
+		ds45_boot_mark_hex("BT_HOOK_D1", (uint32_t)d1);
+	}
+
+	/* Check physical PS button bit in case exposed */
+	if ((d1 & DS45_CTRL_PS) || (data->button[DS45_BTN_LDD] & DS45_CTRL_LDD_PS))
+		ps_pressed = 1;
+
+	/* Check configured custom code/mask */
+	if (g_cfg.bt_ps_code >= 0 && g_cfg.bt_ps_code < data->len &&
+	    g_cfg.bt_ps_code < (int)(sizeof(data->button) / sizeof(data->button[0])) &&
+	    (data->button[g_cfg.bt_ps_code] & g_cfg.bt_ps_mask))
+		ps_pressed = 1;
+
+	/* Combo 1: CREATE + OPTIONS (SELECT + START) */
+	if ((d1 & (DS45_CTRL_SELECT | DS45_CTRL_START)) == (DS45_CTRL_SELECT | DS45_CTRL_START)) {
+		combo_select_start = 1;
+		ps_pressed = 1;
+		s_mask_ss_frames = 12; /* keep masking for ~200ms on release */
+	}
+
+	/* Combo 2: L3 + R3 */
+	if ((d1 & (DS45_CTRL_L3 | DS45_CTRL_R3)) == (DS45_CTRL_L3 | DS45_CTRL_R3)) {
+		combo_l3_r3 = 1;
+		ps_pressed = 1;
+		s_mask_lr_frames = 12;
+	}
+
+	/* Swallow combo buttons while pressed and during release cooldown so they don't leak into game/XMB */
+	if (combo_select_start || s_mask_ss_frames > 0) {
+		data->button[DS45_BTN_DIGITAL1] &= ~(DS45_CTRL_SELECT | DS45_CTRL_START);
+		if (!combo_select_start && s_mask_ss_frames > 0)
+			s_mask_ss_frames--;
+	}
+
+	if (combo_l3_r3 || s_mask_lr_frames > 0) {
+		data->button[DS45_BTN_DIGITAL1] &= ~(DS45_CTRL_L3 | DS45_CTRL_R3);
+		if (!combo_l3_r3 && s_mask_lr_frames > 0)
+			s_mask_lr_frames--;
+	}
+
+	if (ps_pressed) {
+		data->button[DS45_BTN_LDD]      |= DS45_CTRL_LDD_PS;
+		data->button[DS45_BTN_DIGITAL1] |= DS45_CTRL_PS;
+		ds45_trigger_bt_ps(1);
+	} else {
+		ds45_trigger_bt_ps(0);
+	}
+
+	(void)port_no;
+}
+
 void passthru_poll(void)
 {
-	CellPadData data;
 	int i;
 
 	for (i = 0; i < DS45_MAX_PADS; i++) {
@@ -298,56 +403,36 @@ void passthru_poll(void)
 		if (!pad->in_use || pad->link != DS45_LINK_BT)
 			continue;
 
-		memset(&data, 0, sizeof(data));
-		if (cellPadGetData((uint32_t)pad->src_port, &data) != CELL_PAD_OK) {
-			/* A read failure is not proof the controller is gone. Only tear
-			 * the virtual pad down once the port itself stops reporting as
-			 * connected: tearing down and rebuilding on read errors alone
-			 * produced a register/unregister cycle every second, which is
-			 * far more destabilising than a stale sample. */
-			if (++pad->read_fails < PASSTHRU_MAX_READ_FAILS)
-				continue;
-
-			pad->read_fails = 0;
-
-			if (source_still_connected(pad->src_port)) {
-				/* Reads are failing but the port is still there. The open
-				 * question is whether this is what happens while a game
-				 * runs - if the VSH loses access to the pad then, no
-				 * VSH-side plugin can drive a game, and the work has to
-				 * move into the game process. Logged once per episode. */
-				if (!pad->read_blocked) {
-					pad->read_blocked = 1;
-					ds45_boot_mark("src_read_BLOCKED_port_still_connected");
-				}
-				continue;
-			}
-
+		if (!source_still_connected(pad->src_port)) {
 			ds45_boot_mark("passthru_source_disconnected");
 			ldd_unregister(pad);
 			pad->in_use = 0;
 			continue;
 		}
 
-		pad->read_fails = 0;
-		if (pad->read_blocked) {
-			pad->read_blocked = 0;
-			ds45_boot_mark("src_read_recovered");
-		}
+		/* Internal Bluetooth: Live Kernel Memory Monitoring via Syscall 6 (sys_cfw_peek) */
+		{
+			static int s_bt_init_done = 0;
+			static uint64_t s_bt_work_addr = 0;
 
-		/* len == 0 means "nothing changed since the last read". Inject only
-		 * on fresh data: re-sending an unchanged sample every tick is pure
-		 * system load, and enough of it stalls apps while they load. */
-		if (data.len > 0) {
-			if (g_cfg.diag)
-				diag_observe(pad->src_port, &data);
-			state_from_generic(pad, &data, &pad->state);
-			if (!pad->state.valid)
-				continue;
-			if (g_cfg.diag)
-				diag_state(pad);
-			ldd_check_combo(pad);
-			ldd_inject(pad);
+			if (!s_bt_init_done) {
+				s_bt_init_done = 1;
+				/* FW 4.93 TOC = 0x34FBB0, bt_rtoc_entry_1 = -0x3680 */
+				s_bt_work_addr = peekq(0x800000000034FBB0ULL - 0x3680ULL);
+				ds45_boot_mark_u64("PEEK_BT_WORK", s_bt_work_addr);
+			}
+
+			if ((s_bt_work_addr & 0xFFFFFFFF00000000ULL) == 0x8000000000000000ULL &&
+			    s_bt_work_addr > 0x8000000000010000ULL) {
+				uint64_t r_w0 = peekq(s_bt_work_addr + 0xE8);
+				uint64_t r_w1 = peekq(s_bt_work_addr + 0xF0);
+
+				/* Verify Bluetooth HID input report (0xA1 prefix) */
+				if ((r_w0 >> 56) == 0xA1) {
+					/* Forward complete controller report (including physical PS button) to LDD pad */
+					ds45_inject_bt_pad(r_w0, r_w1);
+				}
+			}
 		}
 	}
 }

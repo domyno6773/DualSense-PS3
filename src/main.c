@@ -98,6 +98,70 @@ static void rumble_remove(void)
 	ds45_detour_remove(&act_detour);
 }
 
+/* ------------------------------------------------------------------------ */
+/* VSH Pad Input Interception (Bluetooth Passthrough)                       */
+/* ------------------------------------------------------------------------ */
+
+static ds45_opd_detour_t getdata_detour;
+static ds45_opd_detour_t getdataextra_detour;
+
+static void *const keep_vsh_imports[] = {
+	(void *)cellPadGetData,
+	(void *)cellPadGetDataExtra,
+};
+
+static int vsh_getdata_hook(uint32_t port_no, CellPadData *data)
+{
+	typedef int (*orig_t)(uint32_t, CellPadData *);
+	orig_t orig = (orig_t)(uintptr_t)getdata_detour.saved;
+	int r;
+
+	if (!orig)
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	r = orig(port_no, data);
+	if (r == CELL_PAD_OK && data && data->len > 0) {
+		if (ds45_usb_pads_active() == 0)
+			ds45_process_bt_input(port_no, data);
+	}
+
+	return r;
+}
+
+static int vsh_getdataextra_hook(uint32_t port_no, uint32_t *device_type,
+                                 CellPadData *data)
+{
+	typedef int (*orig_t)(uint32_t, uint32_t *, CellPadData *);
+	orig_t orig = (orig_t)(uintptr_t)getdataextra_detour.saved;
+	int r;
+
+	if (!orig)
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	r = orig(port_no, device_type, data);
+	if (r == CELL_PAD_OK && data && data->len > 0) {
+		if (ds45_usb_pads_active() == 0)
+			ds45_process_bt_input(port_no, data);
+	}
+
+	return r;
+}
+
+static void vsh_hooks_install(void)
+{
+	ds45_detour_opd((void *)cellPadGetData,
+	                (void *)vsh_getdata_hook, &getdata_detour);
+	ds45_detour_opd((void *)cellPadGetDataExtra,
+	                (void *)vsh_getdataextra_hook, &getdataextra_detour);
+	ds45_boot_mark("vsh_hooks_installed");
+}
+
+static void vsh_hooks_remove(void)
+{
+	ds45_detour_opd_remove(&getdata_detour);
+	ds45_detour_opd_remove(&getdataextra_detour);
+}
+
 /* Push whatever the game last asked for to each controller. Only send when
  * something actually changed - the controllers do not need a stream of
  * identical output reports and the DualSense in particular dislikes it. */
@@ -314,6 +378,8 @@ static void ds45_thread(uint64_t arg)
 	rumble_install();
 	ds45_boot_mark("rumble");
 
+	vsh_hooks_install();
+
 	if (g_cfg.diag) {
 		diag_msg("=== DS45PAD " DS45PAD_VERSION " ===");
 		diag_dump_ports();
@@ -368,9 +434,9 @@ static void ds45_thread(uint64_t arg)
 				sticks_save_if_dirty(0);
 
 			/* In AUTO mode a cabled controller always wins: only look for
-			 * Bluetooth pads when nothing is attached over USB. */
+			 * Bluetooth pads when nothing is attached over USB and capacity remains. */
 			if (g_cfg.mode == DS45_MODE_BT ||
-			    (g_cfg.mode == DS45_MODE_AUTO && ds45_active_pads() == 0))
+			    (g_cfg.mode == DS45_MODE_AUTO && ds45_usb_pads_active() == 0 && ds45_bt_pads_active() < (int)g_cfg.max_pads))
 				passthru_scan();
 		}
 	}
@@ -378,6 +444,7 @@ static void ds45_thread(uint64_t arg)
 	if (g_cfg.stick_calibrate)
 		sticks_save_if_dirty(1);
 
+	vsh_hooks_remove();
 	rumble_remove();
 	passthru_release();
 	if (usb_ok)

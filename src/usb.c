@@ -299,6 +299,12 @@ static int32_t ds45_attach(int32_t dev_id)
 		return CELL_USBD_ATTACH_SUCCEEDED;
 	}
 
+	/* In AUTO mode a cabled controller always wins: preempt any active Bluetooth pad */
+	if (g_cfg.mode == DS45_MODE_AUTO && ds45_bt_pads_active() > 0) {
+		ds45_boot_mark("usb_preempt_bt");
+		passthru_release();
+	}
+
 	pad = alloc_slot();
 	if (!pad) {
 		unlock();
@@ -405,6 +411,10 @@ void usb_poll(void)
 		/* Deferred cleanup for controllers unplugged since the last pass. */
 		if (!pad->in_use && pad->handle >= 0) {
 			ldd_unregister(pad);
+			if (g_cfg.mode == DS45_MODE_AUTO && ds45_usb_pads_active() == 0) {
+				ds45_boot_mark("usb_detached_scanning_bt");
+				passthru_scan();
+			}
 			continue;
 		}
 

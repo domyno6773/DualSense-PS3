@@ -253,3 +253,25 @@ int ds45_active_pads(void)
 
 	return n;
 }
+
+int ds45_usb_pads_active(void)
+{
+	int i, n = 0;
+
+	for (i = 0; i < DS45_MAX_PADS; i++)
+		if (g_pads[i].in_use && g_pads[i].link == DS45_LINK_USB)
+			n++;
+
+	return n;
+}
+
+int ds45_bt_pads_active(void)
+{
+	int i, n = 0;
+
+	for (i = 0; i < DS45_MAX_PADS; i++)
+		if (g_pads[i].in_use && g_pads[i].link == DS45_LINK_BT)
+			n++;
+
+	return n;
+}

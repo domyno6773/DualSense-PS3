@@ -478,6 +478,8 @@ void usb_send_output(ds45_pad_t *pad);
 int  passthru_scan(void);
 void passthru_poll(void);
 void passthru_release(void);
+void ds45_process_bt_input(uint32_t port_no, CellPadData *data);
+void ds45_trigger_bt_ps(int pressed);
 
 /* gamehook.c - in-game stick correction (DS45_GAME build) */
 int  gamehook_install(void);
@@ -504,5 +506,7 @@ void  ds45_apply_map(ds45_map_t m, uint16_t *button);
 
 /* Number of controllers currently producing input. */
 int   ds45_active_pads(void);
+int   ds45_usb_pads_active(void);
+int   ds45_bt_pads_active(void);
 
 #endif /* DS45PAD_H */

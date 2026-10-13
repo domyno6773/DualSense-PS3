@@ -6,8 +6,8 @@
 # Plugin status: 1 = Enabled, 0 = Disabled
 ENABLE = 1
 
-# Connection mode: USB (recommended for full native physical PS button support)
-MODE = USB
+# Connection mode: AUTO (automatically detects USB or Bluetooth)
+MODE = AUTO
 
 # Maximum number of controllers managed by the plugin
 MAX_PADS = 1
@@ -19,8 +19,8 @@ POLL_MS = 10
 # 1 = Direct physical PS button capture via USB HID
 PS_ONLY = 1
 
-# Bluetooth PS combo settings (used if running in BT mode)
-BT_PS_COMBO = NONE
+# Bluetooth PS settings (automatically active when connected wirelessly):
+BT_PS_COMBO = SELECT_START
 BT_PS_CODE = -1
 BT_PS_MASK = 0
 ALLOW_INSERT_COMBO = 1

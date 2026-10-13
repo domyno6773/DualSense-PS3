@@ -131,7 +131,7 @@ int ldd_register(ds45_pad_t *pad)
 		pad->handle = handle;
 
 	}
-	if (g_cfg.insert_into_game) {
+	if (g_cfg.insert_into_game && pad->link != DS45_LINK_BT) {
 		if (ldd_set_insert_into_game(pad, 1) != 0) {
 			ldd_unregister(pad);
 			return -1;
