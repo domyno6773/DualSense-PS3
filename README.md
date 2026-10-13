@@ -174,7 +174,7 @@ This project is built upon the incredible work of the PS3 homebrew development c
 
 ---
 
-## 💖 Support the Project / Donazioni
+## 💖 Support the Project
 
 If this project made playing on your PS3 with your DualSense or DualShock 4 controller better and you'd like to support continued development, maintenance, and hardware testing, consider buying me a coffee or sending a donation!
 
@@ -186,7 +186,7 @@ If this project made playing on your PS3 with your DualSense or DualShock 4 cont
 
 > [!TIP]
 > **PayPal Donation Link**: **[paypal.me/domyno6773](https://www.paypal.com/paypalme/domyno6773)**  
-> Any support is greatly appreciated! Grazie per il supporto! ☕🎮
+> Any support is greatly appreciated!☕🎮
 
 ---
 
