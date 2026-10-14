@@ -24,7 +24,7 @@ A high-performance background VSH PRX/SPRX plugin for the **PlayStation 3 (CFW a
 * **Clean In-Game Input**: In games and apps (multiMAN, retro emulators, PS3 titles), input operates cleanly as Player 1 without ghost controllers or duplicate player conflicts.
 * **DualSense & DualShock 4**: Supports official Sony PS5 DualSense (`054c:0ce6`), DualSense Edge (`054c:0df2`), and DualShock 4 v1 & v2 (`054c:05c4`, `054c:09cc`).
 * **Firmware 4.93 Verified**: Thoroughly tested and verified on **PS3 Super Slim running PS3HEN 4.93** (untested on older firmware versions).
-* **CFW & PS3HEN Compatible**: Signed with 3.55 retail keys (`Revision 0A`, VSH Auth-ID `1070000052000001`), ensuring 100% stable booting without console freezes.
+* **CFW & PS3HEN Compatible**: Signed with 3.55 retail keys (`Revision 0A`, VSH Auth-ID `1070000052000001`)
 * **Plug & Play**: Pre-compiled and ready to install directly from the `ps3_ready/` directory.
 
 ---
