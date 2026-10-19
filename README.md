@@ -1,4 +1,13 @@
-# PS3 DualSense & DualShock 4 Controller Plugin (Enhanced DS45Pad)
+# PS3 DualSense & DualShock 4 Controller Plugin (Enhanced DS45Pad) - v2.0.0
+
+> [!CAUTION]
+> # <span style="color:#e63946;">⚠️ CRITICAL DISCLAIMER & HARDWARE NOTICE</span>
+>
+> <span style="color:#e63946;">**ALL TESTS HAVE BEEN CONDUCTED EXCLUSIVELY ON MY SPECIFIC CONSOLE CONFIGURATION (PS3 SUPER SLIM, HFW / PS3HEN 4.93) WITH NO OTHER ACTIVE PLUGINS AND WITHOUT WEBMAN. ANY OTHER SETUP OR CONFIGURATION THAT EXPERIENCES ISSUES IS STRICTLY OUTSIDE MY RESPONSIBILITY AND WILL NOT BE ADDRESSED.**</span>
+>
+> <span style="color:#e63946;">**ANY AND ALL ISSUES OR BUG REPORTS MUST BE SUBMITTED DIRECTLY VIA GITHUB ISSUES. FROM NOW ON, ANY REQUESTS FOR HELP OR SUPPORT ON REDDIT WILL BE STRICTLY IGNORED.**</span>
+>
+> <span style="color:#e63946;">**I ACCEPT ABSOLUTELY NO RESPONSIBILITY FOR WHAT YOU DO TO YOUR CONSOLES. YOU ARE FULLY CONSCIOUS AND AWARE OF YOUR OWN ACTIONS. PROCEED AT YOUR OWN RISK.**</span>
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Platform](https://img.shields.io/badge/Platform-PS3_CFW_%7C_PS3HEN-orange.svg)]()
@@ -6,25 +15,57 @@
 [![Hardware Verified](https://img.shields.io/badge/Status-Verified_Working_on_Hardware-brightgreen.svg)]()
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C.svg?logo=paypal&logoColor=white)](https://www.paypal.com/paypalme/domyno6773)
 
-A high-performance background VSH PRX/SPRX plugin for the **PlayStation 3 (CFW and PS3HEN)** providing native **USB and internal Bluetooth** support for the **PlayStation 5 DualSense** (`CFI-ZCT1`), **DualSense Edge**, and **DualShock 4** controllers — featuring full, native support for the physical **PlayStation (PS / Home) button** with **zero button combinations**!
+A high-performance background VSH PRX/SPRX plugin for the **PlayStation 3 (CFW and PS3HEN)** providing native **USB and internal Bluetooth** support for the **PlayStation 5 DualSense** (`CFI-ZCT1`), **DualSense Edge**, and **DualShock 4** controllers — featuring native physical **PlayStation (PS / Home) button** support with **zero button combinations**!
 
-> [!WARNING]
-> ### ⚠️ Firmware Compatibility Notice
-> **All development, kernel offsets, and real-hardware testing have been performed exclusively on Firmware 4.93 (PS3HEN 4.93).**
-> Compatibility with older or different firmware versions (e.g., 4.80 – 4.92, or various other CFW/HEN revisions) is **not guaranteed and has not been tested**. Because the Bluetooth physical PS button recovery relies on direct LV2 kernel Table of Contents (TOC) offsets and internal memory structures (`bt_work`), these structures may differ across firmware releases. Use on other firmware versions at your own discretion.
+---
+
+## 🚀 What's New in Version 2.0.0 (Bluetooth Overhaul)
+
+This major release completely solves previous Bluetooth limitations on PS3HEN / CFW:
+
+1. **Zero Double-Input in XMB / Dashboard**:
+   - By assigning the physical controller to **Port 7** in PS3 Accessory Settings, the plugin keeps the virtual pad on Port 0 completely silent in XMB. D-pad, analog sticks, and button presses are never duplicated.
+2. **Native XMB PS Button Hold (Console Power Menu)**:
+   - Holding the PS button ($\ge 250\text{ ms}$) in XMB natively brings up the console shutdown menu.
+   - The menu remains open upon releasing the button, allowing full navigation, confirming shutdown/turn off controller with **Cross ($\times$)**, and canceling back to dashboard with **Circle ($\bigcirc$)**.
+3. **Full In-Game Recognition as Player 1 (Syscall 573)**:
+   - PS3 games listen to Port 0. Through kernel Syscall 573 (`INSERT_INTO_GAME`), your Bluetooth DualSense is mapped directly as **Player 1** in all games.
+   - **START** (Options button) and **SELECT** (Create button) work natively.
+   - Analog sticks feature calibrated circularity and deadzones, with full analog sensitivity on **L2 / R2**.
+4. **Interactive In-Game PS Menu Overlay**:
+   - Tap the physical PS button at any time during gameplay to access the in-game XMB overlay.
+5. **Seamless USB & Bluetooth Coexistence**:
+   - Plugging in a USB cable while playing on Bluetooth charges the controller safely without creating ghost controllers or duplicate inputs.
+
+---
+
+> [!IMPORTANT]
+> ## 🎮 MANDATORY SETUP: REASSIGN CONTROLLER TO PORT 7
+>
+> To use the DualSense wirelessly over Bluetooth with zero conflicts, **you must reassign the controller to Port 7** in the PS3 system settings:
+>
+> 1. Turn on your PS3, enable HEN (if on PS3HEN), and connect your DualSense via Bluetooth.
+> 2. On the XMB dashboard, navigate to:  
+>    **Settings** $\rightarrow$ **Accessory Settings** $\rightarrow$ **Reassign Controllers**
+> 3. Change the controller number from **1** to **7** (Controller 7).
+>
+> ### Why is this step mandatory?
+> * The PS3 kernel Bluetooth stack registers the physical gamepad on a native port.
+> * To avoid double inputs on the dashboard while ensuring the controller acts as **Player 1 in every game**, the plugin injects input to **Port 0 (Player 1)** via Syscall 573.
+> * Parking the physical controller on **Port 7** ensures the XMB receives exactly one clean input stream, while games recognize you as Player 1 without phantom controllers!
 
 ---
 
 ## 🌟 Key Features
 
-* **Physical PS / Home Button**: Pressing the physical PlayStation logo button natively opens the in-game XMB overlay and quit menu on **both USB and internal Bluetooth** (no button shortcuts or combos needed).
-* **Native Internal Bluetooth**: Connect your DualSense directly to the console's built-in Bluetooth radio without requiring any external USB dongles or adapters.
-* **Full In-Game PS Menu Navigation**: Over Bluetooth, the PS menu is fully interactive — navigate with the D-Pad/analog sticks, confirm with **Cross**, cancel/close with **Circle**, and close with the **PS button**.
-* **Seamless Auto Mode (`MODE = AUTO`)**: Plug in via USB for ultra-low latency charging & play, or unplug to seamlessly continue playing over wireless internal Bluetooth.
-* **Clean In-Game Input**: In games and apps (multiMAN, retro emulators, PS3 titles), input operates cleanly as Player 1 without ghost controllers or duplicate player conflicts.
-* **DualSense & DualShock 4**: Supports official Sony PS5 DualSense (`054c:0ce6`), DualSense Edge (`054c:0df2`), and DualShock 4 v1 & v2 (`054c:05c4`, `054c:09cc`).
-* **Firmware 4.93 Verified**: Thoroughly tested and verified on **PS3 Super Slim running PS3HEN 4.93** (untested on older firmware versions).
-* **CFW & PS3HEN Compatible**: Signed with 3.55 retail keys (`Revision 0A`, VSH Auth-ID `1070000052000001`)
+* **Physical PS / Home Button**: Pressing the physical PlayStation button natively opens the in-game XMB overlay and power menus on **both USB and internal Bluetooth** (no button shortcuts or combos needed).
+* **Native Internal Bluetooth**: Connect directly to the PS3 built-in Bluetooth radio without any external USB dongles or adapters.
+* **Full In-Game PS Menu Navigation**: Over Bluetooth, the PS menu is fully interactive — navigate with D-Pad/analog sticks, confirm with **Cross**, cancel with **Circle**, and close with the **PS button**.
+* **Seamless Auto Mode (`MODE = AUTO`)**: Plug in via USB for charging & low-latency play, or unplug to seamlessly continue playing over wireless Bluetooth.
+* **Clean In-Game Input**: Operates cleanly as Player 1 in all titles (PS3 games, multiMAN, retro emulators) without duplicate player conflicts.
+* **Controller Support**: Supports official Sony PS5 DualSense (`054c:0ce6`), DualSense Edge (`054c:0df2`), and DualShock 4 v1 & v2 (`054c:05c4`, `054c:09cc`).
+* **Firmware 4.93 Verified**: Thoroughly tested and verified on **PS3 Super Slim running PS3HEN 4.93**.
+* **CFW & PS3HEN Compatible**: Signed with 3.55 retail keys (`Revision 0A`, VSH Auth-ID `1070000052000001`).
 * **Plug & Play**: Pre-compiled and ready to install directly from the `ps3_ready/` directory.
 
 ---
@@ -44,10 +85,10 @@ To restore the genuine physical PS button without risking kernel deadlocks:
 3. **Raw HID Report Interception**: The raw incoming Bluetooth HID report sits in `bt_work` at offset `0xE8` (Quadwords 29 & 30):
    * `0xA1 0x01 [LX] [LY] [RX] [RY] [Buttons1] [Buttons2] [Buttons3]`
    * **Byte 8 (Buttons 3), Bit 0 (`0x01`) is the physical PS button!**
-4. **LDD Virtual Pad Forwarding**: When the physical PS button is pressed, the plugin injects `CELL_PAD_CTRL_LDD_PS` via `cellPadLddDataInsert`, waking the VSH in-game menu.
-5. **Bidirectional Control Bridge**: During Bluetooth operation, the full controller state (D-pad, shapes, triggers, sticks) is continuously mirrored to the virtual LDD interface with in-game insertion disabled (`LDD_INSERT_INTO_GAME_OFF`). This ensures:
-   * **In Game**: The game only receives input from Controller 1 (the native Bluetooth pad) — no phantom player 2.
-   * **In PS Menu**: The overlay receives responsive navigation (Circle to close, Cross to enter, D-pad/sticks to move) from the LDD interface.
+4. **LDD Virtual Pad Forwarding**: When the physical PS button is pressed, the plugin injects `CELL_PAD_CTRL_LDD_PS` via `cellPadLddDataInsert`, waking the VSH menu.
+5. **Bidirectional Control Bridge**: During Bluetooth operation:
+   * **In XMB**: The virtual pad remains muted to avoid double input, waking only when the PS button is pressed or the shutdown menu is opened.
+   * **In Game**: Syscall 573 (`INSERT_INTO_GAME`) directs all inputs cleanly to Port 0 (Player 1), enabling Start, Select, triggers, and sticks.
 
 ---
 
@@ -74,7 +115,7 @@ On `/dev_hdd0/`:
   ```text
   /dev_hdd0/plugins/ds45pad/ds45pad_vsh.sprx
   ```
-  *(Ensure there is a newline at the end of the file).*
+  *(Ensure there is an empty newline at the end of the file).*
 
 ### Step 3: Bluetooth Pairing (First Time Only)
 1. On the PS3 XMB, navigate to **Settings** $\rightarrow$ **Accessory Settings** $\rightarrow$ **Manage Bluetooth® Devices**.
@@ -83,11 +124,15 @@ On `/dev_hdd0/`:
 4. Select the **Wireless Controller** on the PS3 screen.
 5. If prompted for a passkey, enter `0000`.
 
-### Step 4: Reboot and Play
+### Step 4: Reassign Controller to Port 7 (Mandatory!)
+1. In XMB, go to **Settings** $\rightarrow$ **Accessory Settings** $\rightarrow$ **Reassign Controllers**.
+2. Select your controller and change its number to **7**.
+
+### Step 5: Reboot and Play
 1. Restart your PS3.
 2. If running **PS3HEN**, click **Enable HEN**.
 3. Press the **PS button** on your DualSense — it will connect wirelessly via Bluetooth!
-4. Press the **PS button** at any time to open the native XMB menu, and press **Circle** to dismiss it!
+4. Navigate XMB, launch your games, and enjoy full DualSense support.
 
 ---
 
@@ -101,11 +146,11 @@ The plugin behavior can be customized by editing `/dev_hdd0/plugins/ds45pad/ds45
 | `MODE` | `AUTO` | Transport mode: `AUTO` (USB when cabled, otherwise Bluetooth), `USB` (USB only), `BT` (Bluetooth only). |
 | `MAX_PADS` | `1` | Number of simultaneous controllers handled. |
 | `POLL_MS` | `10` | Input polling rate in milliseconds (10ms = 100Hz). |
-| `INSERT_INTO_GAME` | `1` | Injects USB pad inputs directly into games via Syscall 573. |
+| `INSERT_INTO_GAME` | `1` | Injects pad inputs directly into games via Syscall 573. |
 | `ALLOW_INSERT_COMBO` | `1` | Allows toggling in-game injection using `CREATE + OPTIONS + R3`. |
 | `DIAG` | `0` | Diagnostic file logging (`0` = Off, `1` = On). Leave at 0 for optimal performance. |
-| `NOTIFY` | `0` | `1` = Show on-screen notification in XMB on load/attach. |
-| `STICK_CALIBRATION` | `1` | Stick response curve calibration (`0` = Off, `1` = On). |
+| `NOTIFY` | `1` | `1` = Show on-screen notification in XMB on load/attach. |
+| `STICK_CALIBRATION` | `OFF` | Stick response curve calibration (`OFF` or `ON`). |
 
 ---
 
@@ -143,20 +188,9 @@ If the console ever fails to boot or freezes due to plugin conflicts:
 > **Legal Notice**: Due to Sony Interactive Entertainment copyright policies, proprietary Cell SDK headers, libraries (`target/ppu/lib/*`), and encryption keys are **not** bundled in this repository. You must provide your own SDK and keys to compile from source.
 
 ### Building on Windows (PowerShell)
-Set environment variables pointing to your SDK and tools directories:
 ```powershell
-$env:CELL_SDK = "C:\path\to\cell_sdk"
-$env:DS45_TOOLS = "C:\path\to\scetool_and_keys"
 cd src
 .\build.ps1 -Variant vsh
-```
-
-### Building on Linux / Git Bash
-```bash
-export CELL_SDK="/path/to/cell_sdk"
-export DS45_TOOLS="/path/to/scetool_and_keys"
-cd src
-./build.sh
 ```
 
 The compiled and signed plugin will be output as `src/ds45pad_vsh.sprx`.

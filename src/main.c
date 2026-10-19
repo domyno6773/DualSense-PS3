@@ -110,6 +110,40 @@ static void *const keep_vsh_imports[] = {
 	(void *)cellPadGetDataExtra,
 };
 
+static int is_bt_source_port(uint32_t port_no)
+{
+	int i;
+
+	for (i = 0; i < DS45_MAX_PADS; i++) {
+		if (g_pads[i].in_use && g_pads[i].link == DS45_LINK_BT &&
+		    g_pads[i].handle >= 0 && g_pads[i].src_port == (int)port_no)
+			return 1;
+	}
+
+	return 0;
+}
+
+static void silence_pad_data(CellPadData *data)
+{
+	int s;
+
+	if (!data)
+		return;
+
+	for (s = 0; s < data->len && s < CELL_PAD_MAX_CODES; s++)
+		data->button[s] = 0;
+
+	if (data->len > DS45_BTN_ANALOG_LEFT_Y) {
+		data->button[DS45_BTN_ANALOG_LEFT_X]  = DS45_STICK_CENTER;
+		data->button[DS45_BTN_ANALOG_LEFT_Y]  = DS45_STICK_CENTER;
+		data->button[DS45_BTN_ANALOG_RIGHT_X] = DS45_STICK_CENTER;
+		data->button[DS45_BTN_ANALOG_RIGHT_Y] = DS45_STICK_CENTER;
+	}
+
+	for (s = DS45_BTN_SENSOR_X; s <= DS45_BTN_SENSOR_G && s < data->len; s++)
+		data->button[s] = DS45_SENSOR_CENTER;
+}
+
 static int vsh_getdata_hook(uint32_t port_no, CellPadData *data)
 {
 	typedef int (*orig_t)(uint32_t, CellPadData *);
@@ -121,8 +155,8 @@ static int vsh_getdata_hook(uint32_t port_no, CellPadData *data)
 
 	r = orig(port_no, data);
 	if (r == CELL_PAD_OK && data && data->len > 0) {
-		if (ds45_usb_pads_active() == 0)
-			ds45_process_bt_input(port_no, data);
+		if (port_no > 0 && is_bt_source_port(port_no))
+			silence_pad_data(data);
 	}
 
 	return r;
@@ -140,8 +174,8 @@ static int vsh_getdataextra_hook(uint32_t port_no, uint32_t *device_type,
 
 	r = orig(port_no, device_type, data);
 	if (r == CELL_PAD_OK && data && data->len > 0) {
-		if (ds45_usb_pads_active() == 0)
-			ds45_process_bt_input(port_no, data);
+		if (port_no > 0 && is_bt_source_port(port_no))
+			silence_pad_data(data);
 	}
 
 	return r;

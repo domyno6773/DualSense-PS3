@@ -45,8 +45,8 @@ int ldd_set_insert_into_game(ds45_pad_t *pad, int on)
 	uint32_t mode;
 	int32_t result;
 
-	if (pad->handle < 0 || pad->insert_on == on)
-		return pad->handle < 0 ? -1 : 0;
+	if (pad->handle < 0)
+		return -1;
 
 	mode = on ? LDD_INSERT_INTO_GAME_ON : LDD_INSERT_INTO_GAME_OFF;
 	result = sys_pad_ldd_set_insert_mode(pad->handle, 0x100, &mode, 4);
@@ -131,10 +131,10 @@ int ldd_register(ds45_pad_t *pad)
 		pad->handle = handle;
 
 	}
-	if (g_cfg.insert_into_game && pad->link != DS45_LINK_BT) {
-		if (ldd_set_insert_into_game(pad, 1) != 0) {
-			ldd_unregister(pad);
-			return -1;
+	if (g_cfg.insert_into_game) {
+		int res = ldd_set_insert_into_game(pad, 1);
+		if (res != 0) {
+			ds45_boot_mark_hex("ldd_insert_game_err", (uint32_t)res);
 		}
 	} else {
 		ds45_boot_mark("ldd_insert_into_game_off");
